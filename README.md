@@ -11,7 +11,7 @@ Import data from GDRF to Domoticz
     sudo apt-get install sqlite3 nodejs npm
     sudo apt-get install python3 python3-numpy python3-dateutil python3-requests
     npm install winston@2.4.2 
-    git clone 
+    git clone https://github.com/Scrat95220/DomoticzGazpar.git
 
 ### rename configuration file, change login/pass/id
 
