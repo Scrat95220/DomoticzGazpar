@@ -29,8 +29,8 @@ from dateutil.relativedelta import relativedelta
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
 
-USERNAME = os.environ['GASPAR_USERNAME']
-PASSWORD = os.environ['GASPAR_PASSWORD']
+USERNAME = os.environ['GAZPAR_USERNAME']
+PASSWORD = os.environ['GAZPAR_PASSWORD']
 devicerowid = os.environ['DOMOTICZ_ID']
 nbDaysImported = os.environ['NB_DAYS_IMPORTED']
 

@@ -8,7 +8,7 @@ LOG_FILE="domoticz_gazpar.log"
 export PYTHONWARNINGS="ignore"
 
 update_db () {
-  PY_SCRIPT="gaspar.py"
+  PY_SCRIPT="gazpar.py"
   PY_SCRIPT="${BASE_DIR}"/"${PY_SCRIPT}"
   python3 "${PY_SCRIPT}" $1 -o "${BASE_DIR}" >> "${BASE_DIR}"/"${LOG_FILE}" 2>&1
   if  [ $? -eq 0 ]; then
