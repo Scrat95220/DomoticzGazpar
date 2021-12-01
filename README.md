@@ -34,7 +34,6 @@ Manually launch
 
     ./domoticz_gazpar.sh
 
-N.B. If login is not ok, you'll get a nodejs error on console for data will be missing (will be changed).
 
 Then check the login credential if they are ok:
 
