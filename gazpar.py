@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.0 2021-11-29 Scrat
+# (C) v1.0.1 2021-12-01 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -102,8 +102,12 @@ def generate_db_script(session, start_date, end_date):
         req_date = releve['journeeGaziere']
         conso = releve['energieConsomme']
         #print(conso)
-        index = index + conso
-        #print(index)
+        try :
+            index = index + conso
+            #print(index)
+        except TypeError:
+            print(req_date, conso, index, "Invalid Entry")
+            continue;
 
         f.write('DELETE FROM \'Meter_Calendar\' WHERE devicerowid='+str(devicerowid)+' and date = \''+req_date+'\'; INSERT INTO \'Meter_Calendar\' (DeviceRowID,Value,Counter,Date) VALUES ('+str(devicerowid)+', \''+str(int(conso)*1000)+'\', \''+str(index)+'\', \''+req_date+'\');\n')
     
