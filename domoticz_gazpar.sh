@@ -23,6 +23,7 @@ then
   export GAZPAR_USERNAME
   export GAZPAR_PASSWORD
   export DOMOTICZ_ID
+  export DOMOTICZ_ID_M3
   export NB_DAYS_IMPORTED
   update_db 
 else
