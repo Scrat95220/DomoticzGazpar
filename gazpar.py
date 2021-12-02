@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.0.1 2021-12-01 Scrat
+# (C) v1.0 2021-11-29 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -32,6 +32,7 @@ API_BASE_URI = 'https://monespace.grdf.fr/'
 USERNAME = os.environ['GAZPAR_USERNAME']
 PASSWORD = os.environ['GAZPAR_PASSWORD']
 devicerowid = os.environ['DOMOTICZ_ID']
+devicerowidm3 = os.environ['DOMOTICZ_ID_M3']
 nbDaysImported = os.environ['NB_DAYS_IMPORTED']
 
 
@@ -83,8 +84,8 @@ def generate_db_script(session, start_date, end_date):
     #3nd request- Get NumPCE
     resp3 = session.get('https://monespace.grdf.fr/api/e-connexion/users/pce/historique-consultation')
     if resp3.status_code != requests.codes.ok:
-        print("Get NumPce call - error status :"+resp3.status_code+'\n');
-    #print(resp3.text)
+        print("Get NumPce call - error status :",resp3.status_code, '\n');
+    print(resp3.text)
     
     j = json.loads(resp3.text)
     numPce = j[0]['numPce']
@@ -93,26 +94,34 @@ def generate_db_script(session, start_date, end_date):
     
     #print(data)
     j = json.loads(data)
-    
+    print (j)
     index = j[str(numPce)]['releves'][0]['indexDebut']      
     #print(index)
     
     f = open("req.sql", "w")
     for releve in j[str(numPce)]['releves']:
+        #print(releve)
         req_date = releve['journeeGaziere']
         conso = releve['energieConsomme']
-        #print(conso)
+        volume = releve['volumeBrutConsomme']
+        indexm3 = releve['indexDebut']
         try :
             index = index + conso
-            #print(index)
         except TypeError:
             print(req_date, conso, index, "Invalid Entry")
             continue;
-
-        f.write('DELETE FROM \'Meter_Calendar\' WHERE devicerowid='+str(devicerowid)+' and date = \''+req_date+'\'; INSERT INTO \'Meter_Calendar\' (DeviceRowID,Value,Counter,Date) VALUES ('+str(devicerowid)+', \''+str(int(conso)*1000)+'\', \''+str(index)+'\', \''+req_date+'\');\n')
+        
+        #print(req_date, conso, index)
+        if devicerowid:
+            f.write('DELETE FROM \'Meter_Calendar\' WHERE devicerowid='+str(devicerowid)+' and date = \''+req_date+'\'; INSERT INTO \'Meter_Calendar\' (DeviceRowID,Value,Counter,Date) VALUES ('+str(devicerowid)+', \''+str(int(conso)*1000)+'\', \''+str(index)+'\', \''+req_date+'\');\n')
+        if devicerowidm3:
+            f.write('DELETE FROM \'Meter_Calendar\' WHERE devicerowid='+str(devicerowidm3)+' and date = \''+req_date+'\'; INSERT INTO \'Meter_Calendar\' (DeviceRowID,Value,Counter,Date) VALUES ('+str(devicerowidm3)+', \''+str(int(volume)*1000)+'\', \''+str(indexm3)+'\', \''+req_date+'\');\n')
     
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    f.write('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
+    if devicerowid:
+        f.write('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
+    if devicerowidm3:
+        f.write('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
     
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
