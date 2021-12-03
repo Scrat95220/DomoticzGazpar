@@ -20,13 +20,13 @@ Import data from GDRF to Domoticz
 
 and change:
 
-    GASPAR_USERNAME="nom.prenom@mail.com"
-    GASPAR_PASSWORD="password"
+    GASPAR_USERNAME=nom.prenom@mail.com
+    GASPAR_PASSWORD=password
     NB_DAYS_IMPORTED=30
     DOMOTICZ_ID=123
     DOMOTICZ_ID_M3=456
 
-Where NB_DAYS_IMPORTED correspond to the number of days to impirt and DOMOTICZ_ID is id device on domoticz and
+Where NB_DAYS_IMPORTED correspond to the number of days to import and DOMOTICZ_ID is id device on domoticz and
 DOMOTICZ_ID_M3 is the id device of a virtual 'Smart Meter, Gas' device in m3 if exists
 
 Configuration file will not be deleted in future updates.
@@ -35,7 +35,7 @@ Configuration file will not be deleted in future updates.
 
 Manually launch
 
-    ./domoticz_gazpar.sh
+    ./gazpar.py
 
 
 Then check the login credential if they are ok:
@@ -46,4 +46,4 @@ If this is good, you'll get several json files in the directory
 
 ## Add to your cron tab (with crontab -e):
 
-    30 7,17 * * * /home/pi/domoticz/DomoticzGazpar/domoticz_gazpar.sh
+    30 7,17 * * * /home/pi/domoticz/DomoticzGazpar/python3 gazpar.py

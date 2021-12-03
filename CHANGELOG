@@ -1,4 +1,8 @@
 v1.0 - Scrat
   - Adapted to the new GRDF website
-v1.0.1
+v1.0.1 - Scrat
   - Fix : Absence de mesure #1
+v1.1.0 - onlinux 
+  - Feature : Add m3 values
+v1.2.0 - Scrat 
+  - Feature : Only use Python for the config + SQL insertion -> Change cfg file and crontab 

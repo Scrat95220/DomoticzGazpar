@@ -18,6 +18,8 @@ collected via their  website (API).
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import configparser
+import sqlite3
 import os
 import requests
 import datetime
@@ -29,12 +31,19 @@ from dateutil.relativedelta import relativedelta
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
 
-USERNAME = os.environ['GAZPAR_USERNAME']
-PASSWORD = os.environ['GAZPAR_PASSWORD']
-devicerowid = os.environ['DOMOTICZ_ID']
-devicerowidm3 = os.environ['DOMOTICZ_ID_M3']
-nbDaysImported = os.environ['NB_DAYS_IMPORTED']
+#USERNAME = os.environ['GAZPAR_USERNAME']
+#PASSWORD = os.environ['GAZPAR_PASSWORD']
+#devicerowid = os.environ['DOMOTICZ_ID']
+#devicerowidm3 = os.environ['DOMOTICZ_ID_M3']
+#nbDaysImported = os.environ['NB_DAYS_IMPORTED']
 
+userName = ""
+password = ""
+devicerowid = ""
+devicerowidm3 = ""
+nbDaysImported = 30
+
+script_dir=os.path.dirname(os.path.realpath(__file__)) + os.path.sep
 
 class GazparServiceException(Exception):
     """Thrown when the webservice threw an exception."""
@@ -44,24 +53,24 @@ class GazparServiceException(Exception):
 def dtostr(date):
     return date.strftime("%Y-%m-%d")
     
-def login(username, password):
+def login():
     """Logs the user into the GRDF API.
     """
     session = requests.Session()
 
     payload = {
-               'email': username,
+               'email': userName,
                 'password': password,
                 'goto':'https://sofa-connexion.grdf.fr:443/openam/oauth2/externeGrdf/authorize?response_type=code%26scope=openid%20profile%20email%20infotravaux%20%2Fv1%2Faccreditation%20%2Fv1%2Faccreditations%20%2Fdigiconso%2Fv1%20%2Fdigiconso%2Fv1%2Fconsommations%20new_meg%20%2FDemande.read%20%2FDemande.write%26client_id=prod_espaceclient%26state=0%26redirect_uri=https%3A%2F%2Fmonespace.grdf.fr%2F_codexch%26nonce=7cV89oGyWnw28DYdI-702Gjy9f5XdIJ_4dKE_hbsvag%26by_pass_okta=1%26capp=meg', 
                 'capp':'meg'
                }
-
     headers = {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 'Referer': 'https://login.monespace.grdf.fr/mire/connexion?goto=https:%2F%2Fsofa-connexion.grdf.fr:443%2Fopenam%2Foauth2%2FexterneGrdf%2Fauthorize%3Fresponse_type%3Dcode%26scope%3Dopenid%2520profile%2520email%2520infotravaux%2520%252Fv1%252Faccreditation%2520%252Fv1%252Faccreditations%2520%252Fdigiconso%252Fv1%2520%252Fdigiconso%252Fv1%252Fconsommations%2520new_meg%2520%252FDemande.read%2520%252FDemande.write%26client_id%3Dprod_espaceclient%26state%3D0%26redirect_uri%3Dhttps%253A%252F%252Fmonespace.grdf.fr%252F_codexch%26nonce%3D7cV89oGyWnw28DYdI-702Gjy9f5XdIJ_4dKE_hbsvag%26by_pass_okta%3D1%26capp%3Dmeg&realm=%2FexterneGrdf&capp=meg'
                 }
     
     resp1 = session.post(LOGIN_BASE_URI, data=payload, headers=headers)
+    #print (resp1.text)
     if resp1.status_code != requests.codes.ok:
         print("Login call - error status :"+resp1.status_code+'\n');
 
@@ -85,7 +94,7 @@ def generate_db_script(session, start_date, end_date):
     resp3 = session.get('https://monespace.grdf.fr/api/e-connexion/users/pce/historique-consultation')
     if resp3.status_code != requests.codes.ok:
         print("Get NumPce call - error status :",resp3.status_code, '\n');
-    print(resp3.text)
+    #print(resp3.text)
     
     j = json.loads(resp3.text)
     numPce = j[0]['numPce']
@@ -94,11 +103,11 @@ def generate_db_script(session, start_date, end_date):
     
     #print(data)
     j = json.loads(data)
-    print (j)
+    #print (j)
     index = j[str(numPce)]['releves'][0]['indexDebut']      
     #print(index)
     
-    f = open("req.sql", "w")
+    f = open(script_dir +"/req.sql", "w")
     for releve in j[str(numPce)]['releves']:
         #print(releve)
         req_date = releve['journeeGaziere']
@@ -123,19 +132,49 @@ def generate_db_script(session, start_date, end_date):
     if devicerowidm3:
         f.write('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
     
+def update_db():
+    sql_as_string = open(script_dir +"/req.sql", "r").read()
+    conn = sqlite3.connect("/home/pi/domoticz/domoticz.db")
+    c = conn.cursor()
+    c.executescript(sql_as_string)
+    conn.commit()
+    c.close()
+    conn.close()
+    
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
     if r.status_code != requests.codes.ok:
         print("error status :"+r.status_code+'\n');
     return r.text
+    
+def get_config():
+    configuration_file = script_dir + '/domoticz_gazpar.cfg'
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(configuration_file)
+    global userName
+    global password
+    global devicerowid
+    global devicerowidm3
+    global nbDaysImported
+    
+    userName = config['GRDF']['GAZPAR_USERNAME']
+    password = config['GRDF']['GAZPAR_PASSWORD']
+    devicerowid = config['DOMOTICZ']['DOMOTICZ_ID']
+    devicerowidm3 = config['DOMOTICZ']['DOMOTICZ_ID_M3']
+    nbDaysImported = config['GRDF']['NB_DAYS_IMPORTED']
+    
+    #print("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported )
 
 # Main script 
 def main():
-    logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+    logging.basicConfig(filename=script_dir + '/domoticz_gazpar.log', format='%(asctime)s %(message)s', level=logging.INFO)
 
     try:
-        logging.info("logging in as %s...", USERNAME)
-        token = login(USERNAME, PASSWORD)
+        logging.info("Get configuration")
+        get_config()
+        
+        logging.info("logging in as %s...", userName)
+        token = login()
         logging.info("logged in successfully!")
 
         today = datetime.date.today()
@@ -144,6 +183,9 @@ def main():
         logging.info("retrieving data...")
         generate_db_script(token, dtostr(today - relativedelta(days=int(nbDaysImported))), \
                                              dtostr(today))
+                                             
+        # Update DB
+        update_db()
 
         logging.info("got data!")
     except GazparServiceException as exc:
