@@ -26,7 +26,6 @@ import sys
 import json
 from dateutil.relativedelta import relativedelta
 import sqlite3
-import sys
 
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
@@ -146,7 +145,7 @@ def generate_db_script(session, start_date, end_date):
                 c.execute("INSERT INTO Meter_Calendar (DeviceRowID,Value,Counter,Date) VALUES (?,?,?,?)",
                           (devicerowidm3, int(volume) * 1000, indexm3, req_date))
             except sqlite3.Error as err:
-                logging.warniing("sqlite3 error:", err)
+                logging.warning("sqlite3 error:", err)
 
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if devicerowid:
