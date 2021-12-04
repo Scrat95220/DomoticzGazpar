@@ -9,3 +9,6 @@ v1.2.0 - Scrat
 v1.2.1 - Scrat
   - Fix : Fix issue in _domoticz_gazpar.cfg #5
   - Fix : DB path should be configurable #6
+v1.2.2 - Scrat
+  - Fix : Bad login is not detected #8
+  - Fix : Log file will grow indefinitely #7

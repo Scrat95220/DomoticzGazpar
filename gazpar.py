@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.0 2021-11-29 Scrat
+# (C) v1.2.2 2021-12-04 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -68,6 +68,14 @@ def login():
     #print (resp1.text)
     if resp1.status_code != requests.codes.ok:
         print("Login call - error status :"+resp1.status_code+'\n');
+        logging.error("Login call - error status :"+resp1.status_code+'\n')
+        exit()
+    
+    j = json.loads(resp1.text)
+    if j['state'] != "SUCCESS":
+        print("Login call - error status :"+j['state']+'\n');
+        logging.error("Login call - error status :"+j['state']+'\n')
+        exit()
 
     #2nd request
     headers = {
@@ -77,6 +85,8 @@ def login():
     resp2 = session.get(API_BASE_URI, allow_redirects=True)
     if resp2.status_code != requests.codes.ok:
         print("Login 2nd call - error status :"+resp2.status_code+'\n');
+        logging.error("Login 2nd call - error status :"+resp2.status_code+'\n')
+        exit()
     
     return session
     
@@ -89,6 +99,8 @@ def generate_db_script(session, start_date, end_date):
     resp3 = session.get('https://monespace.grdf.fr/api/e-connexion/users/pce/historique-consultation')
     if resp3.status_code != requests.codes.ok:
         print("Get NumPce call - error status :",resp3.status_code, '\n');
+        logging.error("Get NumPce call - error status :",resp3.status_code, '\n')
+        exit()
     #print(resp3.text)
     
     j = json.loads(resp3.text)
@@ -131,15 +143,23 @@ def update_db():
     sql_as_string = open(script_dir +"/req.sql", "r").read()
     conn = sqlite3.connect(dbPath + "/domoticz.db")
     c = conn.cursor()
-    c.executescript(sql_as_string)
-    conn.commit()
+    try:
+        c.executescript(sql_as_string)
+        conn.commit()
+    except sqlite3.Error as er:
+        print('SQLite error: %s' % (' '.join(er.args)))
+        print("Exception class is: ", er.__class__)
+        logging.error("Error during the database update")
+        exit()
     c.close()
     conn.close()
     
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
     if r.status_code != requests.codes.ok:
-        print("error status :"+r.status_code+'\n');
+        print("Get data - error status :"+r.status_code+'\n');
+        logging.error("Get data - error status :",r.status_code, '\n')
+        exit()
     return r.text
     
 def get_config():
@@ -164,7 +184,7 @@ def get_config():
 
 # Main script 
 def main():
-    logging.basicConfig(filename=script_dir + '/domoticz_gazpar.log', format='%(asctime)s %(message)s', level=logging.INFO)
+    logging.basicConfig(filename=script_dir + '/domoticz_gazpar.log', format='%(asctime)s %(message)s', filemode='w', level=logging.INFO)
 
     try:
         logging.info("Get configuration")
