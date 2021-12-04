@@ -31,17 +31,12 @@ from dateutil.relativedelta import relativedelta
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
 
-#USERNAME = os.environ['GAZPAR_USERNAME']
-#PASSWORD = os.environ['GAZPAR_PASSWORD']
-#devicerowid = os.environ['DOMOTICZ_ID']
-#devicerowidm3 = os.environ['DOMOTICZ_ID_M3']
-#nbDaysImported = os.environ['NB_DAYS_IMPORTED']
-
 userName = ""
 password = ""
 devicerowid = ""
 devicerowidm3 = ""
 nbDaysImported = 30
+dbPath = ""
 
 script_dir=os.path.dirname(os.path.realpath(__file__)) + os.path.sep
 
@@ -134,7 +129,7 @@ def generate_db_script(session, start_date, end_date):
     
 def update_db():
     sql_as_string = open(script_dir +"/req.sql", "r").read()
-    conn = sqlite3.connect("/home/pi/domoticz/domoticz.db")
+    conn = sqlite3.connect(dbPath + "/domoticz.db")
     c = conn.cursor()
     c.executescript(sql_as_string)
     conn.commit()
@@ -156,12 +151,14 @@ def get_config():
     global devicerowid
     global devicerowidm3
     global nbDaysImported
+    global dbPath
     
     userName = config['GRDF']['GAZPAR_USERNAME']
     password = config['GRDF']['GAZPAR_PASSWORD']
     devicerowid = config['DOMOTICZ']['DOMOTICZ_ID']
     devicerowidm3 = config['DOMOTICZ']['DOMOTICZ_ID_M3']
     nbDaysImported = config['GRDF']['NB_DAYS_IMPORTED']
+    dbPath = config['SETTINGS']['DB_PATH']
     
     #print("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported )
 

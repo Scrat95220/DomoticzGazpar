@@ -20,11 +20,12 @@ Import data from GDRF to Domoticz
 
 and change:
 
-    GASPAR_USERNAME=nom.prenom@mail.com
-    GASPAR_PASSWORD=password
+    GAZPAR_USERNAME=nom.prenom@mail.com
+    GAZPAR_PASSWORD=password
     NB_DAYS_IMPORTED=30
     DOMOTICZ_ID=123
     DOMOTICZ_ID_M3=456
+	DB_PATH=/home/pi/domoticz (if needed)
 
 Where NB_DAYS_IMPORTED correspond to the number of days to import and DOMOTICZ_ID is id device on domoticz and
 DOMOTICZ_ID_M3 is the id device of a virtual 'Smart Meter, Gas' device in m3 if exists
