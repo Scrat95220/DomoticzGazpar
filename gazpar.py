@@ -18,10 +18,12 @@ collected via their  website (API).
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import configparser
 import os
 import requests
 import datetime
 import logging
+import logging.config
 import sys
 import json
 from dateutil.relativedelta import relativedelta
@@ -30,13 +32,20 @@ import sqlite3
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
 
-USERNAME = os.environ['GAZPAR_USERNAME']
-PASSWORD = os.environ['GAZPAR_PASSWORD']
-devicerowid = os.environ['DOMOTICZ_ID']
-devicerowidm3 = os.environ['DOMOTICZ_ID_M3']
-nbDaysImported = os.environ['NB_DAYS_IMPORTED']
-database = os.environ['DB']
-LoggingLevel = os.environ['LOGGING_LEVEL']
+userName = ""
+password = ""
+devicerowid = ""
+devicerowidm3 = ""
+nbDaysImported = 7
+database = ""
+
+script_dir = os.path.dirname(os.path.realpath(__file__)) + os.path.sep
+configuration_file = script_dir + '/domoticz_gazpar.cfg'
+logging.config.fileConfig(configuration_file, defaults={
+                          'logfilename': script_dir + '/domoticz_gazpar.log'}, disable_existing_loggers=False)
+
+logger = logging.getLogger(__name__)
+
 
 class GazparServiceException(Exception):
     """Thrown when the webservice threw an exception."""
@@ -68,12 +77,13 @@ def login(username, password):
     try:
         resp1 = session.post(LOGIN_BASE_URI, data=payload, headers=headers)
     except requests.exceptions.RequestException as err:
-        print("Error while connecting to https://sofa-connexion.grdf.fr ")
-        print("Error", err)
+        loggig.error(
+            "Error while connecting to https://sofa-connexion.grdf.fr")
+        logging.error("Error %s", err)
         raise SystemExit(e)
 
     if resp1.status_code != requests.codes.ok:
-        print("Login call - error status :", resp1.status_code, '\n')
+        loggig.error("Login call - error status : %s", resp1.status_code)
         sys.exit(1)
 
     # 2nd request
@@ -83,7 +93,7 @@ def login(username, password):
 
     resp2 = session.get(API_BASE_URI, allow_redirects=True)
     if resp2.status_code != requests.codes.ok:
-        print("Login 2nd call - error status :", resp2.status_code, '\n')
+        logging.error("Login 2nd call - error status : %s", resp2.status_code)
 
     return session
 
@@ -97,8 +107,9 @@ def generate_db_script(session, start_date, end_date):
     resp3 = session.get(
         'https://monespace.grdf.fr/api/e-connexion/users/pce/historique-consultation')
     if resp3.status_code != requests.codes.ok:
-        print("Get NumPce call - error status :", resp3.status_code, '\n')
-    logging.debug("Get NumPce: " + resp3.text)
+        logging.error("Get NumPce call - error status : %s", resp3.status_code)
+
+    logging.debug("Get NumPce: %s", resp3.text)
 
     j = json.loads(resp3.text)
     numPce = j[0]['numPce']
@@ -107,10 +118,8 @@ def generate_db_script(session, start_date, end_date):
         session, 'Mois', numPce, start_date, end_date)
 
     j = json.loads(data)
-    # print(j)
 
     index = j[str(numPce)]['releves'][0]['indexDebut']
-    # print(index)
 
     conn = sqlite3.connect(database)
     # This attaches the tracer
@@ -127,7 +136,7 @@ def generate_db_script(session, start_date, end_date):
         try:
             index = index + conso
         except TypeError:
-            logging.warning(req_date, conso, index, "Invalid Entry")
+            logging.warning("Invalid Entry %s", req_date)
             continue
         if devicerowid:
             try:
@@ -136,7 +145,7 @@ def generate_db_script(session, start_date, end_date):
                 c.execute("INSERT INTO Meter_Calendar (DeviceRowID,Value,Counter,Date) VALUES (?,?,?,?)",
                           (devicerowid, int(conso) * 1000, index, req_date))
             except sqlite3.Error as err:
-                logging.warning("sqlite3 error:", err)
+                logging.warning("sqlite3 error: %s", err)
 
         if devicerowidm3:
             try:
@@ -145,7 +154,7 @@ def generate_db_script(session, start_date, end_date):
                 c.execute("INSERT INTO Meter_Calendar (DeviceRowID,Value,Counter,Date) VALUES (?,?,?,?)",
                           (devicerowidm3, int(volume) * 1000, indexm3, req_date))
             except sqlite3.Error as err:
-                logging.warning("sqlite3 error:", err)
+                logging.warning("sqlite3 error: %s", err)
 
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if devicerowid:
@@ -154,7 +163,6 @@ def generate_db_script(session, start_date, end_date):
     if devicerowidm3:
         c.execute("UPDATE DeviceStatus SET lastupdate = ? WHERE id = ?",
                   (today, devicerowidm3))
-
 
     # Trace of all changes within logging DEBUG level
     c.fetchone()
@@ -168,21 +176,39 @@ def get_data_with_interval(session, resource_id, numPce, start_date=None, end_da
     r = session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut=' +
                     start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
     if r.status_code != requests.codes.ok:
-        print("error status :" + r.status_code + '\n')
+        logging.error("error status : %s", r.status_code )
     return r.text
+
+
+def get_config():
+    configuration_file = script_dir + '/domoticz_gazpar.cfg'
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(configuration_file)
+    global userName
+    global password
+    global devicerowid
+    global devicerowidm3
+    global nbDaysImported
+    global database
+
+    userName = config['GRDF']['GAZPAR_USERNAME']
+    password = config['GRDF']['GAZPAR_PASSWORD']
+    devicerowid = config['DOMOTICZ']['DOMOTICZ_ID']
+    devicerowidm3 = config['DOMOTICZ']['DOMOTICZ_ID_M3']
+    nbDaysImported = config['GRDF']['NB_DAYS_IMPORTED']
+    database = config['SETTINGS']['DB_PATH'] + "/domoticz.db"
+    logging.info("Database is %s", database)
 
 # Main script
 
-
 def main():
-    if LoggingLevel:
-        logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
-    else:
-        logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 
     try:
-        logging.info("logging in as %s...", USERNAME)
-        token = login(USERNAME, PASSWORD)
+        logging.debug("Get configuration")
+        get_config()
+
+        logging.info("logging in as %s...", userName)
+        token = login(userName, password)
         logging.info("logged in successfully!")
 
         today = datetime.date.today()
