@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.2.2 2021-12-04 Scrat
+# (C) v1.3.0 2021-12-04 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -18,18 +18,20 @@ collected via their  website (API).
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import urllib.request
+import base64
 import configparser
-import sqlite3
 import os
 import requests
 import datetime
 import logging
-import sys
 import json
 from dateutil.relativedelta import relativedelta
 
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
+
+base64string=""
 
 userName = ""
 password = ""
@@ -37,6 +39,9 @@ devicerowid = ""
 devicerowidm3 = ""
 nbDaysImported = 30
 dbPath = ""
+domoticzserver   = ""
+domoticzusername = ""
+domoticzpassword = ""
 
 script_dir=os.path.dirname(os.path.realpath(__file__)) + os.path.sep
 
@@ -44,6 +49,26 @@ class GazparServiceException(Exception):
     """Thrown when the webservice threw an exception."""
     pass
 
+def domoticzrequest (url):
+  global base64string
+
+  request = urllib.request.Request(url)
+  if(domoticzusername != "" and domoticzpassword!= ""):
+    base64string = base64.encodebytes(('%s:%s' % (domoticzusername, domoticzpassword)).encode()).decode().replace('\n', '')
+    request.add_header("Authorization", "Basic %s" % base64string)
+    
+  try:  
+    response = urllib.request.urlopen(request)
+    return response.read()
+  except urllib.error.HTTPError as e:
+    print(e.__dict__)
+    logging.error("Domoticz call - HttpError :"+str(e.__dict__)+'\n')
+    exit()
+  except urllib.error.URLError as e:
+    print(e.__dict__)
+    logging.error("Domoticz call - UrlError :"+str(e.__dict__)+'\n')
+    exit()
+  
 # Date formatting 
 def dtostr(date):
     return date.strftime("%Y-%m-%d")
@@ -90,8 +115,7 @@ def login():
     
     return session
     
-def generate_db_script(session, start_date, end_date):
-    """Retreives monthly energy consumption data."""
+def update_counters(session, start_date, end_date):
     #print('start_date: ' + start_date)
     #print('end_date: ' + end_date)
     
@@ -129,31 +153,10 @@ def generate_db_script(session, start_date, end_date):
         
         #print(req_date, conso, index)
         if devicerowid:
-            f.write('DELETE FROM \'Meter_Calendar\' WHERE devicerowid='+str(devicerowid)+' and date = \''+req_date+'\'; INSERT INTO \'Meter_Calendar\' (DeviceRowID,Value,Counter,Date) VALUES ('+str(devicerowid)+', \''+str(int(conso)*1000)+'\', \''+str(index)+'\', \''+req_date+'\');\n')
+            domoticzrequest("http://" + domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowid + "&nvalue=0&svalue=" +str(index)+ ";" + str(int(conso)*1000) + ";" +req_date)
         if devicerowidm3:
-            f.write('DELETE FROM \'Meter_Calendar\' WHERE devicerowid='+str(devicerowidm3)+' and date = \''+req_date+'\'; INSERT INTO \'Meter_Calendar\' (DeviceRowID,Value,Counter,Date) VALUES ('+str(devicerowidm3)+', \''+str(int(volume)*1000)+'\', \''+str(indexm3)+'\', \''+req_date+'\');\n')
-    
-    today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    if devicerowid:
-        f.write('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
-    if devicerowidm3:
-        f.write('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
-    
-def update_db():
-    sql_as_string = open(script_dir +"/req.sql", "r").read()
-    conn = sqlite3.connect(dbPath + "/domoticz.db")
-    c = conn.cursor()
-    try:
-        c.executescript(sql_as_string)
-        conn.commit()
-    except sqlite3.Error as er:
-        print('SQLite error: %s' % (' '.join(er.args)))
-        print("Exception class is: ", er.__class__)
-        logging.error("Error during the database update")
-        exit()
-    c.close()
-    conn.close()
-    
+            domoticzrequest("http://" + domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
+        
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
     if r.status_code != requests.codes.ok:
@@ -172,13 +175,20 @@ def get_config():
     global devicerowidm3
     global nbDaysImported
     global dbPath
+    global domoticzserver
+    global domoticzusername
+    global domoticzpassword
     
     userName = config['GRDF']['GAZPAR_USERNAME']
     password = config['GRDF']['GAZPAR_PASSWORD']
     devicerowid = config['DOMOTICZ']['DOMOTICZ_ID']
     devicerowidm3 = config['DOMOTICZ']['DOMOTICZ_ID_M3']
     nbDaysImported = config['GRDF']['NB_DAYS_IMPORTED']
-    dbPath = config['SETTINGS']['DB_PATH']
+    dbPath = config['DOMOTICZ_SETTINGS']['DB_PATH']
+    domoticzserver   = config['DOMOTICZ_SETTINGS']['HOSTNAME']
+    domoticzusername = config['DOMOTICZ_SETTINGS']['USERNAME']
+    domoticzpassword = config['DOMOTICZ_SETTINGS']['PASSWORD']
+    
     
     #print("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported )
 
@@ -187,27 +197,26 @@ def main():
     logging.basicConfig(filename=script_dir + '/domoticz_gazpar.log', format='%(asctime)s %(message)s', filemode='w', level=logging.INFO)
 
     try:
+        # Get Configuration
         logging.info("Get configuration")
         get_config()
         
+        # Login to GRDF API
         logging.info("logging in as %s...", userName)
         token = login()
         logging.info("logged in successfully!")
 
         today = datetime.date.today()
 
-        # Generate DB script
+        # Update Counters Domoticz
         logging.info("retrieving data...")
-        generate_db_script(token, dtostr(today - relativedelta(days=int(nbDaysImported))), \
+        update_counters(token, dtostr(today - relativedelta(days=int(nbDaysImported))), \
                                              dtostr(today))
                                              
-        # Update DB
-        update_db()
-
         logging.info("got data!")
     except GazparServiceException as exc:
         logging.error(exc)
-        sys.exit(1)
+        exit()
 
 if __name__ == "__main__":
     main()

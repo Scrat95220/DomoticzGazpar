@@ -2,18 +2,16 @@
 Import data from GDRF to Domoticz
 
 # create a device in Domoticz
-- In Domoticz, go to hardware, create a virtual "rfx meter counter" or "Dummy".
-  You may as well create a virtual 'Smart Meter, Gas' device in m3
+- In Domoticz, go to hardware, create a virtual "Manager counter".
+  You may as well create a virtual 'Manager counter, Gas' device in m3
 - Then in Devices, add it to the devices. (mark down the id for later).
-- When in Utility, edit the device and change it to Electric (instant+counter) type.
 
 ## modules to install - linux
 
-    sudo apt-get install sqlite3
     sudo apt-get install python3 python3-dateutil python3-requests
     git clone https://github.com/Scrat95220/DomoticzGazpar.git
 
-### rename configuration file, change login/pass/id
+### rename configuration file, change settings
 
     cp _domoticz_gazpar.cfg domoticz_gazpar.cfg
     nano domoticz_gazpar.cfg
@@ -26,6 +24,9 @@ and change:
     DOMOTICZ_ID=123
     DOMOTICZ_ID_M3=456
 	DB_PATH=/home/pi/domoticz (if needed)
+	HOSTNAME=localhost:8080 
+	USERNAME = 
+	PASSWORD = 
 
 Where NB_DAYS_IMPORTED correspond to the number of days to import and DOMOTICZ_ID is id device on domoticz and
 DOMOTICZ_ID_M3 is the id device of a virtual 'Smart Meter, Gas' device in m3 if exists

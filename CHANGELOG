@@ -12,3 +12,5 @@ v1.2.1 - Scrat
 v1.2.2 - Scrat
   - Fix : Bad login is not detected #8
   - Fix : Log file will grow indefinitely #7
+v1.3.0 - Scrat
+  - Feature : Use Domoticz API for inject datas
