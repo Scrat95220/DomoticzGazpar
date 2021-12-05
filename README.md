@@ -25,6 +25,7 @@ and change:
     NB_DAYS_IMPORTED=30
     DOMOTICZ_ID=123
     DOMOTICZ_ID_M3=456
+    DB_PATH=/home/pi/domoticz (if needed)
 
 Where NB_DAYS_IMPORTED correspond to the number of days to impirt and DOMOTICZ_ID is id device on domoticz and
 DOMOTICZ_ID_M3 is the id device of a virtual 'Smart Meter, Gas' device in m3 if exists
@@ -35,7 +36,7 @@ Configuration file will not be deleted in future updates.
 
 Manually launch
 
-    ./domoticz_gazpar.sh
+    python3 gazpar.py
 
 
 Then check the login credential if they are ok:
@@ -46,4 +47,4 @@ If this is good, you'll get several json files in the directory
 
 ## Add to your cron tab (with crontab -e):
 
-    37 7,17 * * * timeout 30 /home/pi/domoticz/DomoticzGazpar/domoticz_gazpar.sh
+    37 7,17 * * * timeout 30 /home/pi/domoticz/DomoticzGazpar/python3 gazpar.py
