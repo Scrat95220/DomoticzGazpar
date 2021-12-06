@@ -138,7 +138,6 @@ def update_counters(session, start_date, end_date):
     index = j[str(numPce)]['releves'][0]['indexDebut']      
     #print(index)
     
-    f = open(script_dir +"/req.sql", "w")
     for releve in j[str(numPce)]['releves']:
         #print(releve)
         req_date = releve['journeeGaziere']
