@@ -14,3 +14,5 @@ v1.2.2 - Scrat
   - Fix : Log file will grow indefinitely #7
 v1.3.0 - Scrat
   - Feature : Use Domoticz API for inject datas
+v1.3.1 - Scrat
+  - Feature : Logs improvment

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.0 2021-12-04 Scrat
+# (C) v1.3.1 2021-12-04 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -30,6 +30,8 @@ from dateutil.relativedelta import relativedelta
 
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
+
+logLevel = "INFO"
 
 base64string=""
 
@@ -90,7 +92,7 @@ def login():
                 }
     
     resp1 = session.post(LOGIN_BASE_URI, data=payload, headers=headers)
-    #print (resp1.text)
+    logging.debug("1st Auth Response : \n" + resp1.text)
     if resp1.status_code != requests.codes.ok:
         print("Login call - error status :"+resp1.status_code+'\n');
         logging.error("Login call - error status :"+resp1.status_code+'\n')
@@ -108,6 +110,7 @@ def login():
                 }
 
     resp2 = session.get(API_BASE_URI, allow_redirects=True)
+    logging.debug("2nd API Response : \n" + resp2.text)
     if resp2.status_code != requests.codes.ok:
         print("Login 2nd call - error status :"+resp2.status_code+'\n');
         logging.error("Login 2nd call - error status :"+resp2.status_code+'\n')
@@ -116,23 +119,21 @@ def login():
     return session
     
 def update_counters(session, start_date, end_date):
-    #print('start_date: ' + start_date)
-    #print('end_date: ' + end_date)
+    logging.debug('start_date: ' + start_date + "; end_date: " + end_date)
     
     #3nd request- Get NumPCE
     resp3 = session.get('https://monespace.grdf.fr/api/e-connexion/users/pce/historique-consultation')
+    logging.debug("Get NumPce Response : \n" + resp3.text)
     if resp3.status_code != requests.codes.ok:
         print("Get NumPce call - error status :",resp3.status_code, '\n');
         logging.error("Get NumPce call - error status :",resp3.status_code, '\n')
         exit()
-    #print(resp3.text)
     
     j = json.loads(resp3.text)
     numPce = j[0]['numPce']
     
     data = get_data_with_interval(session, 'Mois', numPce, start_date, end_date)
     
-    #print(data)
     j = json.loads(data)
     #print (j)
     index = j[str(numPce)]['releves'][0]['indexDebut']      
@@ -152,12 +153,15 @@ def update_counters(session, start_date, end_date):
         
         #print(req_date, conso, index)
         if devicerowid:
+            logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(int(conso)*1000) + ";" + str(index))
             domoticzrequest("http://" + domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowid + "&nvalue=0&svalue=" +str(index)+ ";" + str(int(conso)*1000) + ";" +req_date)
         if devicerowidm3:
+            logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(int(conso)*1000) + ";" + str(indexm3))
             domoticzrequest("http://" + domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
         
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
+    logging.debug("Data : \n" + r.text)
     if r.status_code != requests.codes.ok:
         print("Get data - error status :"+r.status_code+'\n');
         logging.error("Get data - error status :",r.status_code, '\n')
@@ -168,6 +172,7 @@ def get_config():
     configuration_file = script_dir + '/domoticz_gazpar.cfg'
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(configuration_file)
+    global logLevel
     global userName
     global password
     global devicerowid
@@ -178,6 +183,7 @@ def get_config():
     global domoticzusername
     global domoticzpassword
     
+    logLevel = config['SETTINGS']['LOG_LEVEL']
     userName = config['GRDF']['GAZPAR_USERNAME']
     password = config['GRDF']['GAZPAR_PASSWORD']
     devicerowid = config['DOMOTICZ']['DOMOTICZ_ID']
@@ -188,17 +194,24 @@ def get_config():
     domoticzusername = config['DOMOTICZ_SETTINGS']['USERNAME']
     domoticzpassword = config['DOMOTICZ_SETTINGS']['PASSWORD']
     
-    
-    #print("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported )
+    logging.debug("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported + "," + dbPath + "," + domoticzserver + "," + domoticzusername + "," + domoticzpassword)
 
 # Main script 
 def main():
-    logging.basicConfig(filename=script_dir + '/domoticz_gazpar.log', format='%(asctime)s %(message)s', filemode='w', level=logging.INFO)
+    logging.basicConfig(filename=script_dir + '/domoticz_gazpar.log', format='%(asctime)s %(message)s', filemode='w') 
 
     try:
         # Get Configuration
         logging.info("Get configuration")
         get_config()
+        
+        #Set log level
+        if(logLevel == "INFO"):
+            logging.getLogger().setLevel(logging.INFO)
+        if(logLevel == "DEBUG"):
+            logging.getLogger().setLevel(logging.DEBUG)
+        if(logLevel == "ERROR"):
+            logging.getLogger().setLevel(logging.ERROR)            
         
         # Login to GRDF API
         logging.info("logging in as %s...", userName)
