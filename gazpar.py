@@ -154,10 +154,10 @@ def update_counters(session, start_date, end_date):
         #print(req_date, conso, index)
         if devicerowid:
             logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(int(conso)*1000) + ";" + str(index))
-            domoticzrequest("http://" + domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowid + "&nvalue=0&svalue=" +str(index)+ ";" + str(int(conso)*1000) + ";" +req_date)
+            domoticzrequest( domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowid + "&nvalue=0&svalue=" +str(index)+ ";" + str(int(conso)*1000) + ";" +req_date)
         if devicerowidm3:
             logging.debug("Data to inject : " + req_date + ";" + devicerowidm3 + ";" + str(volume) + ";" + str(indexm3))
-            domoticzrequest("http://" + domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
+            domoticzrequest( domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
         
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
