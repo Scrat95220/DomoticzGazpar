@@ -2,8 +2,8 @@
 Import data from GDRF to Domoticz
 
 # create a device in Domoticz
-- In Domoticz, go to hardware, create a virtual "Manager counter".
-  You may as well create a virtual 'Manager counter, Gas' device in m3
+- In Domoticz, go to hardware, create a virtual "Managed counter".
+  You may as well create a virtual 'Managed counter, Gas' device in m3 (to do so : create first a Managed counter, then modify it in the Utility tab to change Switch type to Gas)
 - Then in Devices, add it to the devices. (mark down the id for later).
 
 ## modules to install - linux
@@ -24,7 +24,7 @@ and change:
     DOMOTICZ_ID=123
     DOMOTICZ_ID_M3=456
 	DB_PATH=/home/pi/domoticz (if needed)
-	HOSTNAME=localhost:8080 
+	HOSTNAME=https://localhost:8080 
 	USERNAME = 
 	PASSWORD = 
 
