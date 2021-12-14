@@ -48,4 +48,4 @@ If this is good, you'll get several json files in the directory
 
 ## Add to your cron tab (with crontab -e):
 
-    30 7,17 * * * /home/pi/domoticz/DomoticzGazpar/python3 gazpar.py
+    30 7,17 * * * python3 /home/pi/domoticz/DomoticzGazpar/gazpar.py
