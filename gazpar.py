@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.1 2021-12-04 Scrat
+# (C) v1.3.2 2021-12-14 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -26,6 +26,7 @@ import requests
 import datetime
 import logging
 import json
+import sqlite3
 from dateutil.relativedelta import relativedelta
 
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
@@ -158,6 +159,26 @@ def update_counters(session, start_date, end_date):
         if devicerowidm3:
             logging.debug("Data to inject : " + req_date + ";" + devicerowidm3 + ";" + str(volume) + ";" + str(indexm3))
             domoticzrequest( domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
+
+def update_db():
+    conn = sqlite3.connect(dbPath + "/domoticz.db")
+    c = conn.cursor()
+    try:
+        today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if devicerowid:
+            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
+            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
+        if devicerowidm3:
+            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
+            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
+        conn.commit()
+    except sqlite3.Error as er:
+        print('SQLite error: %s' % (' '.join(er.args)))
+        print("Exception class is: ", er.__class__)
+        logging.error("Error during the database update")
+        exit()
+    c.close()
+    conn.close()
         
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
@@ -224,6 +245,10 @@ def main():
         logging.info("retrieving data...")
         update_counters(token, dtostr(today - relativedelta(days=int(nbDaysImported))), \
                                              dtostr(today))
+        
+        # Update Last Seen value
+        logging.info("update Last Seen value...")
+        update_db()
                                              
         logging.info("got data!")
     except GazparServiceException as exc:
