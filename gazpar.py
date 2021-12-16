@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.2 2021-12-14 Scrat
+# (C) v1.3.3 2021-12-14 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -45,6 +45,9 @@ dbPath = ""
 domoticzserver   = ""
 domoticzusername = ""
 domoticzpassword = ""
+
+lastConso = 0
+lastVolume = 0
 
 script_dir=os.path.dirname(os.path.realpath(__file__)) + os.path.sep
 
@@ -120,6 +123,9 @@ def login():
     return session
     
 def update_counters(session, start_date, end_date):
+    global lastConso
+    global lastVolume
+
     logging.debug('start_date: ' + start_date + "; end_date: " + end_date)
     
     #3nd request- Get NumPCE
@@ -159,18 +165,24 @@ def update_counters(session, start_date, end_date):
         if devicerowidm3:
             logging.debug("Data to inject : " + req_date + ";" + devicerowidm3 + ";" + str(volume) + ";" + str(indexm3))
             domoticzrequest( domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
+    
+    # Retrieve Last value for update the counter view
+    nbReleve = len(j[str(numPce)]['releves'])
+    #print("nbreleve : " + str(nbReleve))
+    lastConso = j[str(numPce)]['releves'][nbReleve -1]['energieConsomme']
+    lastVolume = j[str(numPce)]['releves'][nbReleve - 1]['volumeBrutConsomme']
 
-def update_db():
+def update_db(lastConso, lastVolume):
     conn = sqlite3.connect(dbPath + "/domoticz.db")
     c = conn.cursor()
     try:
         today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if devicerowid:
-            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
-            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowid)+';')
+            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(int(lastConso)*1000)+'\' WHERE id = '+str(devicerowid)+';')
+            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(int(lastConso)*1000)+'\'  WHERE id = '+str(devicerowid)+';')
         if devicerowidm3:
-            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
-            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\' WHERE id = '+str(devicerowidm3)+';')
+            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(lastVolume)+'\' WHERE id = '+str(devicerowidm3)+';')
+            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(lastVolume)+'\' WHERE id = '+str(devicerowidm3)+';')
         conn.commit()
     except sqlite3.Error as er:
         print('SQLite error: %s' % (' '.join(er.args)))
@@ -246,9 +258,9 @@ def main():
         update_counters(token, dtostr(today - relativedelta(days=int(nbDaysImported))), \
                                              dtostr(today))
         
-        # Update Last Seen value
-        logging.info("update Last Seen value...")
-        update_db()
+        # Update Last Seen and last day values
+        logging.info("update Last Seen and last day values...")
+        update_db(lastConso, lastVolume)
                                              
         logging.info("got data!")
     except GazparServiceException as exc:
