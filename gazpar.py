@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.3 2021-12-14 Scrat
+# (C) v1.3.4 2021-12-23 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -26,8 +26,8 @@ import requests
 import datetime
 import logging
 import json
-import sqlite3
 from dateutil.relativedelta import relativedelta
+from urllib.parse import urlencode
 
 LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
 API_BASE_URI = 'https://monespace.grdf.fr/'
@@ -46,9 +46,6 @@ domoticzserver   = ""
 domoticzusername = ""
 domoticzpassword = ""
 
-lastConso = 0
-lastVolume = 0
-
 script_dir=os.path.dirname(os.path.realpath(__file__)) + os.path.sep
 
 class GazparServiceException(Exception):
@@ -58,7 +55,7 @@ class GazparServiceException(Exception):
 def domoticzrequest (url):
   global base64string
 
-  request = urllib.request.Request(url)
+  request = urllib.request.Request(domoticzserver + url)
   if(domoticzusername != "" and domoticzpassword!= ""):
     base64string = base64.encodebytes(('%s:%s' % (domoticzusername, domoticzpassword)).encode()).decode().replace('\n', '')
     request.add_header("Authorization", "Basic %s" % base64string)
@@ -123,9 +120,6 @@ def login():
     return session
     
 def update_counters(session, start_date, end_date):
-    global lastConso
-    global lastVolume
-
     logging.debug('start_date: ' + start_date + "; end_date: " + end_date)
     
     #3nd request- Get NumPCE
@@ -151,46 +145,54 @@ def update_counters(session, start_date, end_date):
         req_date = releve['journeeGaziere']
         conso = releve['energieConsomme']
         volume = releve['volumeBrutConsomme']
-        indexm3 = releve['indexDebut']
+        indexm3 = releve['indexFin']
+        req_date_time = releve['dateFinReleve']
         try :
             index = index + conso
         except TypeError:
             print(req_date, conso, index, "Invalid Entry")
             continue;
         
+        date_time = datetime.datetime.strptime(req_date_time[:19], '%Y-%m-%dT%H:%M:%S').strftime("%Y-%m-%d %H:%M:%S")
+        
         #print(req_date, conso, index)
         if devicerowid:
             logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(int(conso)*1000) + ";" + str(index))
-            domoticzrequest( domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowid + "&nvalue=0&svalue=" +str(index)+ ";" + str(int(conso)*1000) + ";" +req_date)
+            
+            # Generate URLs, for historique and for update
+            args = {'type': 'command', 'param': 'udevice', 'idx': devicerowid, 'svalue': str(index) + ";" + str(int(conso)*1000) + ";" + req_date}
+            url_historique = '/json.htm?' + urlencode(args)
+             
+            args['svalue'] = str(index)  + ";" + str(int(conso)*1000) + ";" + date_time
+            url_daily = '/json.htm?' + urlencode(args)
+
+            args['svalue'] = str(int(conso)*1000)
+            url_current = '/json.htm?' + urlencode(args)
+            
+            domoticzrequest(url_historique)
+            
         if devicerowidm3:
             logging.debug("Data to inject : " + req_date + ";" + devicerowidm3 + ";" + str(volume) + ";" + str(indexm3))
-            domoticzrequest( domoticzserver + "/json.htm?type=command&param=udevice&idx=" + devicerowidm3 + "&nvalue=0&svalue=" +str(indexm3)+ ";" + str(int(volume)) + ";" +req_date)
-    
-    # Retrieve Last value for update the counter view
-    nbReleve = len(j[str(numPce)]['releves'])
-    #print("nbreleve : " + str(nbReleve))
-    lastConso = j[str(numPce)]['releves'][nbReleve -1]['energieConsomme']
-    lastVolume = j[str(numPce)]['releves'][nbReleve - 1]['volumeBrutConsomme']
+            
+            # Generate URLs, for historique and for update
+            args_m3 = {'type': 'command', 'param': 'udevice', 'idx': devicerowidm3, 'svalue': str(indexm3) + ";" + str(int(volume)) + ";" + req_date}
+            url_historique_m3 = '/json.htm?' + urlencode(args_m3)
+            
+            args_m3['svalue'] = str(indexm3)  + ";" + str(int(volume)) + ";" + date_time
+            url_daily_m3 = '/json.htm?' + urlencode(args_m3)
 
-def update_db(lastConso, lastVolume):
-    conn = sqlite3.connect(dbPath + "/domoticz.db")
-    c = conn.cursor()
-    try:
-        today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if devicerowid:
-            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(int(lastConso)*1000)+'\' WHERE id = '+str(devicerowid)+';')
-            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(int(lastConso)*1000)+'\'  WHERE id = '+str(devicerowid)+';')
-        if devicerowidm3:
-            c.execute('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(lastVolume)+'\' WHERE id = '+str(devicerowidm3)+';')
-            logging.debug('UPDATE DeviceStatus SET lastupdate = \''+today+'\', sValue = \''+str(lastVolume)+'\' WHERE id = '+str(devicerowidm3)+';')
-        conn.commit()
-    except sqlite3.Error as er:
-        print('SQLite error: %s' % (' '.join(er.args)))
-        print("Exception class is: ", er.__class__)
-        logging.error("Error during the database update")
-        exit()
-    c.close()
-    conn.close()
+            args_m3['svalue'] = str(int(volume))
+            url_current_m3 = '/json.htm?' + urlencode(args_m3)
+            
+            domoticzrequest(url_historique_m3)
+    
+    if devicerowid:
+        domoticzrequest(url_current)
+        domoticzrequest(url_daily)
+    
+    if devicerowidm3:
+        domoticzrequest(url_current_m3)
+        domoticzrequest(url_daily_m3)
         
 def get_data_with_interval(session, resource_id, numPce, start_date=None, end_date=None):
     r=session.get('https://monespace.grdf.fr/api/e-conso/pce/consommation/informatives?dateDebut='+ start_date + '&dateFin=' + end_date + '&pceList[]=' + str(numPce))
@@ -257,10 +259,6 @@ def main():
         logging.info("retrieving data...")
         update_counters(token, dtostr(today - relativedelta(days=int(nbDaysImported))), \
                                              dtostr(today))
-        
-        # Update Last Seen and last day values
-        logging.info("update Last Seen and last day values...")
-        update_db(lastConso, lastVolume)
                                              
         logging.info("got data!")
     except GazparServiceException as exc:

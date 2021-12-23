@@ -20,3 +20,5 @@ v1.3.2 - Scrat
   - Fix : Update Last seen value
 v1.3.3 - Scrat
   - Feature : Update Last day value
+v1.3.4 - Scrat
+  - Feature : No more usage of SQL insertion
