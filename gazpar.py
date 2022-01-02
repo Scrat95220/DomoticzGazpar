@@ -19,6 +19,7 @@ collected via their  website (API).
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import urllib.request
+import ssl
 import base64
 import configparser
 import os
@@ -55,13 +56,14 @@ class GazparServiceException(Exception):
 def domoticzrequest (url):
   global base64string
 
+  context = ssl._create_unverified_context()
   request = urllib.request.Request(domoticzserver + url)
   if(domoticzusername != "" and domoticzpassword!= ""):
     base64string = base64.encodebytes(('%s:%s' % (domoticzusername, domoticzpassword)).encode()).decode().replace('\n', '')
     request.add_header("Authorization", "Basic %s" % base64string)
     
   try:  
-    response = urllib.request.urlopen(request)
+    response = urllib.request.urlopen(request, context=context)
     return response.read()
   except urllib.error.HTTPError as e:
     print(e.__dict__)
