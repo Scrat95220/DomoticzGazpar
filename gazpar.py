@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.4 2021-12-23 Scrat
+# (C) v1.3.5 2021-12-23 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -144,9 +144,11 @@ def update_counters(session, start_date, end_date):
         #print(releve)
         req_date = releve['journeeGaziere']
         conso = releve['energieConsomme']
-        volume = releve['volumeBrutConsomme']
         indexm3 = releve['indexFin']
+        coeffConversion = releve['coeffConversion']
         req_date_time = releve['dateFinReleve']
+        #volume = releve['volumeBrutConsomme']
+        volume = round(int(conso)/int(coeffConversion),2)
         try :
             index = index + conso
         except TypeError:
@@ -175,13 +177,13 @@ def update_counters(session, start_date, end_date):
             logging.debug("Data to inject : " + req_date + ";" + devicerowidm3 + ";" + str(volume) + ";" + str(indexm3))
             
             # Generate URLs, for historique and for update
-            args_m3 = {'type': 'command', 'param': 'udevice', 'idx': devicerowidm3, 'svalue': str(indexm3) + ";" + str(int(volume)) + ";" + req_date}
+            args_m3 = {'type': 'command', 'param': 'udevice', 'idx': devicerowidm3, 'svalue': str(indexm3) + ";" + str(volume) + ";" + req_date}
             url_historique_m3 = '/json.htm?' + urlencode(args_m3)
             
-            args_m3['svalue'] = str(indexm3)  + ";" + str(int(volume)) + ";" + date_time
+            args_m3['svalue'] = str(indexm3)  + ";" + str(volume) + ";" + date_time
             url_daily_m3 = '/json.htm?' + urlencode(args_m3)
 
-            args_m3['svalue'] = str(int(volume))
+            args_m3['svalue'] = str(volume)
             url_current_m3 = '/json.htm?' + urlencode(args_m3)
             
             domoticzrequest(url_historique_m3)

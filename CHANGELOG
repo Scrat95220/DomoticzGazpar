@@ -22,3 +22,5 @@ v1.3.3 - Scrat
   - Feature : Update Last day value
 v1.3.4 - Scrat
   - Feature : No more usage of SQL insertion
+v1.3.5 - Scrat
+  - Feature : Calculation of the real value concerning the volume used
