@@ -24,3 +24,5 @@ v1.3.4 - Scrat
   - Feature : No more usage of SQL insertion
 v1.3.5 - Scrat
   - Feature : Calculation of the real value concerning the volume used
+v1.3.6 - Scrat
+  - Fix : Manage the case when no values are present for some days

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.5 2021-12-23 Scrat
+# (C) v1.3.6 2022-01-21 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -150,8 +150,9 @@ def update_counters(session, start_date, end_date):
         coeffConversion = releve['coeffConversion']
         req_date_time = releve['dateFinReleve']
         #volume = releve['volumeBrutConsomme']
-        volume = round(int(conso)/int(coeffConversion),2)
+        
         try :
+            volume = round(int(conso)/int(coeffConversion),2)
             index = index + conso
         except TypeError:
             print(req_date, conso, index, "Invalid Entry")
