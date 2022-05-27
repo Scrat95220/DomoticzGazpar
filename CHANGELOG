@@ -28,3 +28,5 @@ v1.3.6 - Scrat
   - Fix : Manage the case when no values are present for some days
 v1.3.7 - Scrat
   - Fix : Re-use volume value taken from GRDF websitedue to issue when calcuted volume <1m3
+v1.3.8 - Scrat
+  - Add Domoticz RQ and RS in debug traces

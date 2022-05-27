@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.7 2022-01-21 Scrat
+# (C) v1.3.8 2022-01-21 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -62,8 +62,10 @@ def domoticzrequest (url):
     base64string = base64.encodebytes(('%s:%s' % (domoticzusername, domoticzpassword)).encode()).decode().replace('\n', '')
     request.add_header("Authorization", "Basic %s" % base64string)
     
-  try:  
+  try:
+    logging.debug("Domoticz Request : \n" + request.full_url)  
     response = urllib.request.urlopen(request, context=context)
+    logging.debug("Domoticz Response : \n" + response.read().decode('utf-8')) 
     return response.read()
   except urllib.error.HTTPError as e:
     print(e.__dict__)
