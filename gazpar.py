@@ -98,8 +98,8 @@ def login():
     resp1 = session.post(LOGIN_BASE_URI, data=payload, headers=headers)
     logging.debug("1st Auth Response : \n" + resp1.text)
     if resp1.status_code != requests.codes.ok:
-        print("Login call - error status :"+resp1.status_code+'\n');
-        logging.error("Login call - error status :"+resp1.status_code+'\n')
+        print("Login call - error status :"+ str( resp1.status_code ) +'\n');
+        logging.error("Login call - error status :"+ str( resp1.status_code ) +'\n')
         exit()
     
     j = json.loads(resp1.text)
@@ -116,8 +116,8 @@ def login():
     resp2 = session.get(API_BASE_URI, allow_redirects=True)
     logging.debug("2nd API Response : \n" + resp2.text)
     if resp2.status_code != requests.codes.ok:
-        print("Login 2nd call - error status :"+resp2.status_code+'\n');
-        logging.error("Login 2nd call - error status :"+resp2.status_code+'\n')
+        print("Login 2nd call - error status :"+ str( resp2.status_code ) +'\n');
+        logging.error("Login 2nd call - error status :"+ str( resp2.status_code ) +'\n')
         exit()
     
     return session
