@@ -13,8 +13,8 @@ Import data from GDRF to Domoticz
     git clone https://github.com/Scrat95220/DomoticzGazpar.git
 	
 ## Workaround due to the CATPCHA issue
-	The script will try to import the GRDF xlsx file if the connection to the API fail.
-	Go to the GRDF website, import the XLSX data in "Jour". Use de attribute XLS_PATH for set the path of your file (example: grdf.xlsx)
+- The script will try to import the GRDF xlsx file if the connection to the API fail.
+- Go to the GRDF website, import the XLSX data in "Jour". Use de attribute XLS_PATH for set the path of your file (example: grdf.xlsx)
 
 ### rename configuration file, change settings
 
