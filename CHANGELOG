@@ -30,3 +30,5 @@ v1.3.7 - Scrat
   - Fix : Re-use volume value taken from GRDF websitedue to issue when calcuted volume <1m3
 v1.3.8 - Scrat
   - Add Domoticz RQ and RS in debug traces
+v1.4.0 - Scrat
+  - Add an XLS data import when the connection to the API fail (due to the CATPCHA for example...)

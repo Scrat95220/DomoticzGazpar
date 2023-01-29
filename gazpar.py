@@ -18,6 +18,7 @@ collected via their  website (API).
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import xlrd
 import urllib.request
 import ssl
 import base64
@@ -43,6 +44,7 @@ devicerowid = ""
 devicerowidm3 = ""
 nbDaysImported = 30
 dbPath = ""
+xlsPath = ""
 domoticzserver   = ""
 domoticzusername = ""
 domoticzpassword = ""
@@ -102,12 +104,16 @@ def login():
     if resp1.status_code != requests.codes.ok:
         print("Login call - error status :"+resp1.status_code+'\n');
         logging.error("Login call - error status :"+resp1.status_code+'\n')
+        if xlsPath != "":
+            xlsimport()
         exit()
     
     j = json.loads(resp1.text)
     if j['state'] != "SUCCESS":
         print("Login call - error status :"+j['state']+'\n');
         logging.error("Login call - error status :"+j['state']+'\n')
+        if xlsPath != "":
+            xlsimport()
         exit()
 
     #2nd request
@@ -221,6 +227,7 @@ def get_config():
     global devicerowid
     global devicerowidm3
     global nbDaysImported
+    global xlsPath
     global dbPath
     global domoticzserver
     global domoticzusername
@@ -232,12 +239,86 @@ def get_config():
     devicerowid = config['DOMOTICZ']['DOMOTICZ_ID']
     devicerowidm3 = config['DOMOTICZ']['DOMOTICZ_ID_M3']
     nbDaysImported = config['GRDF']['NB_DAYS_IMPORTED']
+    xlsPath = config['GRDF']['XLS_PATH']
     dbPath = config['DOMOTICZ_SETTINGS']['DB_PATH']
     domoticzserver   = config['DOMOTICZ_SETTINGS']['HOSTNAME']
     domoticzusername = config['DOMOTICZ_SETTINGS']['USERNAME']
     domoticzpassword = config['DOMOTICZ_SETTINGS']['PASSWORD']
     
-    logging.debug("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported + "," + dbPath + "," + domoticzserver + "," + domoticzusername + "," + domoticzpassword)
+    logging.debug("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported + "," + xlsPath + "," + dbPath + "," + domoticzserver + "," + domoticzusername + "," + domoticzpassword)
+    
+def xlsimport():
+    workbook = xlrd.open_workbook(xlsPath)
+    sheet = workbook.sheet_by_index(0)
+    nbRows = sheet.nrows
+    index = sheet.cell(9,2).value
+    
+    if(int(nbDaysImported)>nbRows):
+        print("nbDaysImported max allowed is " + str(nbRows-9))
+        logging.debug("nbDaysImported max allowed is " + str(nbRows-9))
+        exit()
+        
+    #i : inital date to import
+    i=nbRows-int(nbDaysImported)
+    while nbRows > i:     
+        req_date = sheet.cell(i,1).value
+        conso = sheet.cell(i,5).value
+        indexm3 = sheet.cell(i,3).value
+        req_date_time = sheet.cell(i,1).value
+        volume = sheet.cell(i,4).value
+        
+        i = i+1
+        
+        try :
+            index = index + conso
+        except TypeError:
+            print(req_date, conso, index, "Invalid Entry")
+            continue;
+            
+        date_time = datetime.datetime.strptime(req_date_time, '%d/%m/%Y').strftime("%Y-%m-%d %H:%M:%S")
+        req_date = datetime.datetime.strptime(req_date, '%d/%m/%Y').strftime("%Y-%m-%d")
+        
+        #print(req_date, conso, index)
+        if devicerowid:
+            logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(int(conso)*1000) + ";" + str(index))
+            
+            # Generate URLs, for historique and for update
+            args = {'type': 'command', 'param': 'udevice', 'idx': devicerowid, 'svalue': str(index) + ";" + str(int(conso)*1000) + ";" + req_date}
+            url_historique = '/json.htm?' + urlencode(args)
+             
+            args['svalue'] = str(index)  + ";" + str(int(conso)*1000) + ";" + date_time
+            url_daily = '/json.htm?' + urlencode(args)
+
+            args['svalue'] = str(int(conso)*1000)
+            url_current = '/json.htm?' + urlencode(args)
+            
+            #print(url_historique)
+            domoticzrequest(url_historique)
+            
+        if devicerowidm3:
+            logging.debug("Data to inject : " + req_date + ";" + devicerowidm3 + ";" + str(volume) + ";" + str(indexm3))
+            
+            # Generate URLs, for historique and for update
+            args_m3 = {'type': 'command', 'param': 'udevice', 'idx': devicerowidm3, 'svalue': str(indexm3) + ";" + str(volume) + ";" + req_date}
+            url_historique_m3 = '/json.htm?' + urlencode(args_m3)
+            
+            args_m3['svalue'] = str(indexm3)  + ";" + str(volume) + ";" + date_time
+            url_daily_m3 = '/json.htm?' + urlencode(args_m3)
+
+            args_m3['svalue'] = str(volume)
+            url_current_m3 = '/json.htm?' + urlencode(args_m3)
+            
+            domoticzrequest(url_historique_m3)
+            
+    
+    if devicerowid:
+        domoticzrequest(url_current)
+        domoticzrequest(url_daily)
+    
+    if devicerowidm3:
+        domoticzrequest(url_current_m3)
+        domoticzrequest(url_daily_m3)
+        
 
 # Main script 
 def main():

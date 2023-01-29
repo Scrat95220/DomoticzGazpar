@@ -9,7 +9,12 @@ Import data from GDRF to Domoticz
 ## modules to install - linux
 
     sudo apt-get install python3 python3-dateutil python3-requests
+	pip install xlrd
     git clone https://github.com/Scrat95220/DomoticzGazpar.git
+	
+## Workaround due to the CATPCHA issue
+	The script will try to import the GRDF xlsx file if the connection to the API fail.
+	Go to the GRDF website, import the XLSX data in "Jour". Use de attribute XLS_PATH for set the path of your file (example: grdf.xlsx)
 
 ### rename configuration file, change settings
 
@@ -21,6 +26,7 @@ and change:
     GAZPAR_USERNAME=nom.prenom@mail.com
     GAZPAR_PASSWORD=password
     NB_DAYS_IMPORTED=30
+	XLS_PATH=path to your xlsx file imported
     DOMOTICZ_ID=123
     DOMOTICZ_ID_M3=456
 	DB_PATH=/home/pi/domoticz (if needed)
