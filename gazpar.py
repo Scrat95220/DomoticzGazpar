@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.3.8 2022-01-21 Scrat
+# (C) v1.4.1 2022-01-21 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -18,7 +18,7 @@ collected via their  website (API).
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import xlrd
+import openpyxl
 import urllib.request
 import ssl
 import base64
@@ -248,10 +248,10 @@ def get_config():
     logging.debug("config : " + userName + "," + password + "," + devicerowid + "," + devicerowidm3 + "," + nbDaysImported + "," + xlsPath + "," + dbPath + "," + domoticzserver + "," + domoticzusername + "," + domoticzpassword)
     
 def xlsimport():
-    workbook = xlrd.open_workbook(xlsPath)
-    sheet = workbook.sheet_by_index(0)
-    nbRows = sheet.nrows
-    index = sheet.cell(9,2).value
+    workbook = openpyxl.load_workbook(xlsPath)
+    sheet = workbook.active 
+    nbRows = sheet.max_row
+    index = sheet.cell(row=10, column=3).value
     
     if(int(nbDaysImported)>nbRows):
         print("nbDaysImported max allowed is " + str(nbRows-9))
@@ -259,13 +259,13 @@ def xlsimport():
         exit()
         
     #i : inital date to import
-    i=nbRows-int(nbDaysImported)
-    while nbRows > i:     
-        req_date = sheet.cell(i,1).value
-        conso = sheet.cell(i,5).value
-        indexm3 = sheet.cell(i,3).value
-        req_date_time = sheet.cell(i,1).value
-        volume = sheet.cell(i,4).value
+    i=nbRows-int(nbDaysImported)+1
+    while nbRows+1 > i:
+        req_date = sheet.cell(row=i, column=2).value
+        conso = sheet.cell(row=i, column=6).value
+        indexm3 = sheet.cell(row=i, column=4).value
+        req_date_time = sheet.cell(row=i, column=2).value 
+        volume = sheet.cell(row=i, column=5).value 
         
         i = i+1
         

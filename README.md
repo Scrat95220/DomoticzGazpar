@@ -9,7 +9,7 @@ Import data from GDRF to Domoticz
 ## modules to install - linux
 
     sudo apt-get install python3 python3-dateutil python3-requests
-	pip install xlrd
+	pip install openpyxl
     git clone https://github.com/Scrat95220/DomoticzGazpar.git
 	
 ## Workaround due to the CATPCHA issue

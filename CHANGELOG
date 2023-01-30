@@ -32,3 +32,5 @@ v1.3.8 - Scrat
   - Add Domoticz RQ and RS in debug traces
 v1.4.0 - Scrat
   - Add an XLS data import when the connection to the API fail (due to the CATPCHA for example...)
+v1.4.1 - Scrat
+  - Replace xlrd by openpyxl
