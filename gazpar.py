@@ -148,7 +148,7 @@ def update_counters(session, start_date, end_date):
     
     j = json.loads(data)
     #print (j)
-    index = j[str(numPce)]['releves'][0]['indexDebut']      
+    index = j[str(numPce)]['releves'][0]['indexDebut']*1000   
     #print(index)
     
     for releve in j[str(numPce)]['releves']:
@@ -162,7 +162,8 @@ def update_counters(session, start_date, end_date):
         
         try :
             #volume = round(int(conso)/int(coeffConversion),2)
-            index = index + conso
+            conso *= 1000
+            index += conso
         except TypeError:
             print(req_date, conso, index, "Invalid Entry")
             continue;
@@ -171,16 +172,16 @@ def update_counters(session, start_date, end_date):
         
         #print(req_date, conso, index)
         if devicerowid:
-            logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(int(conso)*1000) + ";" + str(index))
+            logging.debug("Data to inject : " + req_date + ";" + devicerowid + ";" + str(conso) + ";" + str(index))
             
             # Generate URLs, for historique and for update
-            args = {'type': 'command', 'param': 'udevice', 'idx': devicerowid, 'svalue': str(index) + ";" + str(int(conso)*1000) + ";" + req_date}
+            args = {'type': 'command', 'param': 'udevice', 'idx': devicerowid, 'svalue': str(index) + ";" + str(conso) + ";" + req_date}
             url_historique = '/json.htm?' + urlencode(args)
              
-            args['svalue'] = str(index)  + ";" + str(int(conso)*1000) + ";" + date_time
+            args['svalue'] = str(index)  + ";" + str(conso) + ";" + date_time
             url_daily = '/json.htm?' + urlencode(args)
 
-            args['svalue'] = str(int(conso)*1000)
+            args['svalue'] = str(conso)
             url_current = '/json.htm?' + urlencode(args)
             
             domoticzrequest(url_historique)
