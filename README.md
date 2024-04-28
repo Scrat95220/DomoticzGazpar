@@ -1,57 +1,48 @@
 # DomoticzGazpar
 Import data from GDRF to Domoticz
 
-# create a device in Domoticz
-- In Domoticz, go to hardware, create a virtual "Managed counter".
-  You may as well create a virtual 'Managed counter, Gas' device in m3 (to do so : create first a Managed counter, then modify it in the Utility tab to change Switch type to Gas)
-- Then in Devices, add it to the devices. (mark down the id for later).
+## Création du "Virtual Sensor" in Domoticz :
+	* Créer un Matériel de Type "Dummy" -> Domoticz / Setup / Hardware / Dummy
+	* Créer un "Virtual Sensor" de type : "Managed Counter"
+	* Configurer le sensor -> Domoticz / Utility / [Bouton "edit" de votre sensor]
+	  * Type Counter : energy
+	  * Counter Divider : 0
+	  * Meter Offset : 0
+	  
+	* Créer un Matériel de Type "Dummy" -> Domoticz / Setup / Hardware / Dummy
+	* Créer un "Virtual Sensor" de type : "Managed Counter"
+	* Configurer le sensor -> Domoticz / Utility / [Bouton "edit" de votre sensor]
+	  * Type Counter : gas
+	  * Counter Divider : 1000
+	  * Meter Offset : 0
+
+## prerequisites :
+	* `firefox`+`geckodriver` OR `chromium`+`chromium-driver`
+	* python 3
+	* xvfb
+	* xephyr (recommandé)
+	* modules python :
+	  * selenium
+	  * pyvirtualdisplay
+	  * colorama
+	  * urllib
+	  * Some others
 
 ## modules to install - linux
 
-    sudo apt-get install python3 python3-dateutil python3-requests
+    sudo apt-get install python3 python3-dateutil python3-requests firefox firefox-geckodriver xvfb xserver-xephyr python3-selenium python3-pyvirtualdisplay python3-colorama
 	pip install openpyxl
     git clone https://github.com/Scrat95220/DomoticzGazpar.git
 	
-## Workaround due to the CATPCHA issue
-- The script will try to import the GRDF xlsx file if the connection to the API fail.
-- Go to the GRDF website, import the XLSX data in "Jour". Use de attribute XLS_PATH for set the path of your file (example: grdf.xlsx)
 
 ### rename configuration file, change settings
 
-    cp _domoticz_gazpar.cfg domoticz_gazpar.cfg
-    nano domoticz_gazpar.cfg
+    cp config.json.exemple config.json
+    nano config.json
 
-and change:
 
-    GAZPAR_USERNAME=nom.prenom@mail.com
-    GAZPAR_PASSWORD=password
-    NB_DAYS_IMPORTED=30
-	XLS_PATH=path to your xlsx file imported
-    DOMOTICZ_ID=123
-    DOMOTICZ_ID_M3=456
-	DB_PATH=/home/pi/domoticz (if needed)
-	HOSTNAME=https://localhost:8080 
-	USERNAME = 
-	PASSWORD = 
-
-Where NB_DAYS_IMPORTED correspond to the number of days to import and DOMOTICZ_ID is id device on domoticz and
-DOMOTICZ_ID_M3 is the id device of a virtual 'Smart Meter, Gas' device in m3 if exists
-
-Configuration file will not be deleted in future updates.
-
-## testing before launch
+## Launch
 
 Manually launch
 
-    ./gazpar.py
-
-
-Then check the login credential if they are ok:
-
-    domoticz_gazpar.log
-
-If this is good, you'll get several json files in the directory
-
-## Add to your cron tab (with crontab -e):
-
-    30 7,17 * * * python3 /home/pi/domoticz/DomoticzGazpar/gazpar.py
+    ./gazpar.py --run

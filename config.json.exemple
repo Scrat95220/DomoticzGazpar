@@ -1,0 +1,11 @@
+{
+    "grdf_login": "monadresse@email.fr",
+    "grdf_password": "GretaThunberg",
+	"grdf_nbDaysImported": 30,
+    "domoticz_server": "http://IP:PORT",
+    "domoticz_idx": "42",
+	"domoticz_idx_m3": "43",
+    "domoticz_login": "",
+    "domoticz_password": "",
+    "timeout": "30" 
+}
