@@ -665,7 +665,7 @@ class GrdfCrawler:
         time.sleep(10)
 
         ###### Wait until spinner is gone #####
-        self.wait_until_disappeared(By.CSS_SELECTOR, "auth-content-inner")
+        self.wait_until_disappeared(By.CSS_SELECTOR, "auth-container")
         time.sleep(1)
         
         ###### Wait for Password #####
@@ -700,7 +700,7 @@ class GrdfCrawler:
         time.sleep(3)
 
         ###### Wait until spinner is gone #####
-        self.wait_until_disappeared(By.CSS_SELECTOR, "auth-content-inner")
+        self.wait_until_disappeared(By.CSS_SELECTOR, "auth-container")
         time.sleep(1)
 
         ### Consommation detaillée
@@ -750,7 +750,7 @@ class GrdfCrawler:
         )
         
         ###### Click Telecharger #####     
-        element = self.__browser.find_element_by_class_name('forms-button')
+        element = self.__browser.find_element_by_class_name('download-button')
         self.__browser.execute_script("arguments[0].click();", element)        
 
         self.print(
