@@ -1,6 +1,8 @@
 # DomoticzGazpar
 Import data from GDRF to Domoticz
 
+## $\text{\color{red}{!!! This integration is broken since CAPTCHA is mandatory on GrDF site !!!}}$
+
 # create a device in Domoticz
 - In Domoticz, go to hardware, create a virtual "Managed counter".
   You may as well create a virtual 'Managed counter, Gas' device in m3 (to do so : create first a Managed counter, then modify it in the Utility tab to change Switch type to Gas)
