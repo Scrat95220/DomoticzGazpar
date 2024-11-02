@@ -178,6 +178,8 @@ def update_counters(session, start_date, end_date):
         try :
             #volume = round(int(conso)/int(coeffConversion),2)
             index = index + conso
+            volume *= 100
+            indexm3 *= 100
         except TypeError:
             print(req_date, conso, index, "Invalid Entry")
             continue;
