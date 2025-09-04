@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-# (C) v1.4.1 2022-01-21 Scrat
+# (C) v1.5.0 2025-09-04 Scrat
 """Generates energy consumption JSON files from GRDf consumption data
 collected via their  website (API).
 """
@@ -28,11 +28,10 @@ import requests
 import datetime
 import logging
 import json
+import re
 from dateutil.relativedelta import relativedelta
 from urllib.parse import urlencode
-
-LOGIN_BASE_URI = 'https://login.monespace.grdf.fr/sofit-account-api/api/v1/auth'
-API_BASE_URI = 'https://monespace.grdf.fr/'
+import http.cookiejar
 
 logLevel = "INFO"
 
@@ -86,48 +85,83 @@ def login():
     """Logs the user into the GRDF API.
     """
     session = requests.Session()
+    START_URL = "https://monespace.grdf.fr/"
 
-    payload = {
-               'email': userName,
-                'password': password,
-                'goto':'https://sofa-connexion.grdf.fr:443/openam/oauth2/externeGrdf/authorize?response_type=code%26scope=openid%20profile%20email%20infotravaux%20%2Fv1%2Faccreditation%20%2Fv1%2Faccreditations%20%2Fdigiconso%2Fv1%20%2Fdigiconso%2Fv1%2Fconsommations%20new_meg%20%2FDemande.read%20%2FDemande.write%26client_id=prod_espaceclient%26state=0%26redirect_uri=https%3A%2F%2Fmonespace.grdf.fr%2F_codexch%26nonce=7cV89oGyWnw28DYdI-702Gjy9f5XdIJ_4dKE_hbsvag%26by_pass_okta=1%26capp=meg', 
-                'capp':'meg'
-               }
-    headers = {
-                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-                'domain': 'grdf.fr',
-                'Referer': 'https://login.monespace.grdf.fr/mire/connexion?goto=https:%2F%2Fsofa-connexion.grdf.fr:443%2Fopenam%2Foauth2%2FexterneGrdf%2Fauthorize%3Fresponse_type%3Dcode%26scope%3Dopenid%2520profile%2520email%2520infotravaux%2520%252Fv1%252Faccreditation%2520%252Fv1%252Faccreditations%2520%252Fdigiconso%252Fv1%2520%252Fdigiconso%252Fv1%252Fconsommations%2520new_meg%2520%252FDemande.read%2520%252FDemande.write%26client_id%3Dprod_espaceclient%26state%3D0%26redirect_uri%3Dhttps%253A%252F%252Fmonespace.grdf.fr%252F_codexch%26nonce%3D7cV89oGyWnw28DYdI-702Gjy9f5XdIJ_4dKE_hbsvag%26by_pass_okta%3D1%26capp%3Dmeg&realm=%2FexterneGrdf&capp=meg'
-                }
+    MAIL_SESSION_TOKEN_URL = "https://connexion.grdf.fr/idp/idx/identify"
+    MAIL_SESSION_TOKEN_PAYLOAD = """{{
+        "identifier": "{0}",
+        "stateHandle": "{1}"
+    }}"""
     
-    resp1 = session.post(LOGIN_BASE_URI, data=payload, headers=headers)
-    logging.debug("1st Auth Response : \n" + resp1.text)
-    if resp1.status_code != requests.codes.ok:
-        print("Login call - error status :"+resp1.status_code+'\n');
-        logging.error("Login call - error status :"+resp1.status_code+'\n')
-        if xlsPath != "":
-            xlsimport()
-        exit()
+    PASSWORD_SESSION_TOKEN_URL = "https://connexion.grdf.fr/idp/idx/challenge/answer"
+    PASSWORD_SESSION_TOKEN_PAYLOAD = """{{
+        "credentials": {{
+            "passcode": "{0}"
+        }},
+        "stateHandle": "{1}"
+            }}"""
+    # self.session = Session()
     
-    j = json.loads(resp1.text)
-    if j['state'] != "SUCCESS":
-        print("Login call - error status :"+j['state']+'\n');
-        logging.error("Login call - error status :"+j['state']+'\n')
-        if xlsPath != "":
-            xlsimport()
+    session.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+       
+    start_response = session.get(START_URL)
+    if start_response.status_code != 200:
+        raise ServerError(
+            f"An error occurred while logging in start. Status code: {start_response.status_code} - {start_response.url}",
+            start_response.status_code,
+        )
+
+    pattern = r'"stateToken"\s*:\s*"([^"]+)"'
+    match = re.search(pattern, start_response.text)
+    if match:
+        state_token_html = match.group(1)
+        state_token = state_token_html.replace("\\x2D", "-")
+    else:
+        raise ValueError("Cannot retrieve stateToken inside HTML response")
+
+    payload = MAIL_SESSION_TOKEN_PAYLOAD.format(userName, state_token)
+    session.cookies.set("ln", userName)
+
+    mail_response = session.post(
+        MAIL_SESSION_TOKEN_URL,
+        data=payload,
+        headers={"Accept": "application/json; okta-version=1.0.0", "Content-Type": "application/json"},
+    )
+
+    if mail_response.status_code != 200:
+        raise Exception(
+            f"An error occurred while logging in. Status code: {mail_response.status_code} - {mail_response.text} - {mail_response.payload}")
         exit()
 
-    #2nd request
-    headers = {
-                'Referer': 'https://sofa-connexion.grdf.fr:443/openam/oauth2/externeGrdf/authorize?response_type=code&scope=openid profile email infotravaux /v1/accreditation /v1/accreditations /digiconso/v1 /digiconso/v1/consommations new_meg /Demande.read /Demande.write&client_id=prod_espaceclient&state=0&redirect_uri=https://monespace.grdf.fr/_codexch&nonce=7cV89oGyWnw28DYdI-702Gjy9f5XdIJ_4dKE_hbsvag&by_pass_okta=1&capp=meg'
-                }
-
-    resp2 = session.get(API_BASE_URI, allow_redirects=True)
-    logging.debug("2nd API Response : \n" + resp2.text)
-    if resp2.status_code != requests.codes.ok:
-        print("Login 2nd call - error status :"+resp2.status_code+'\n');
-        logging.error("Login 2nd call - error status :"+resp2.status_code+'\n')
-        exit()
+    # get auth token
+    state_handle = mail_response.json().get("stateHandle")
+    logging.debug("state_handle: %s", state_handle)
     
+    payload = PASSWORD_SESSION_TOKEN_PAYLOAD.format(password, state_handle)
+
+    password_response = session.post(
+        PASSWORD_SESSION_TOKEN_URL,
+        data=payload,
+        headers={"Accept": "application/json; okta-version=1.0.0", "Content-Type": "application/json"},
+    )
+
+    if password_response.status_code != 200:
+        raise ServerError(
+            f"An error occurred while logging in password. Status code: {password_response.status_code} - {password_response.text}",
+            password_response.status_code,
+        )
+
+    success_url = password_response.json()["success"]["href"]
+
+    response_redirect = session.get(success_url)
+
+    if response_redirect.status_code != 200:
+        raise ServerError(
+            f"An error occurred while logging in response_redirect. Status code: {response_redirect.status_code} - {response_redirect.url}",
+            response_redirect.status_code,
+        )
+        exit()
+
     return session
     
 def update_counters(session, start_date, end_date):

@@ -34,3 +34,5 @@ v1.4.0 - Scrat
   - Add an XLS data import when the connection to the API fail (due to the CATPCHA for example...)
 v1.4.1 - Scrat
   - Replace xlrd by openpyxl
+v1.5.0 - Scrat
+  - Fix NGINX error - Change of authentification method
